@@ -12,6 +12,7 @@ import {
   SearchSymbolsCallback,
   ServerTimeCallback,
   SubscribeBarsCallback,
+  Timezone,
 } from "../../../../assets/charting_library";
 import { InstrumentKey } from "../../../shared/models/instruments/instrument-key.model";
 import { InstrumentsService } from "../../instruments/services/instruments.service";
@@ -24,7 +25,6 @@ import {
 import { HistoryService } from "../../../shared/services/history.service";
 import { BarsRequest } from "../../light-chart/models/bars-request.model";
 import { Candle } from "../../../shared/models/history/candle.model";
-import { environment } from "../../../../environments/environment";
 import { HttpClient } from "@angular/common/http";
 import { MathHelper } from "../../../shared/utils/math-helper";
 import { SearchFilter } from "../../instruments/models/search-filter.model";
@@ -38,18 +38,25 @@ import { InstrumentDataPart } from "../models/synthetic-instruments.model";
 import { Instrument } from "../../../shared/models/instruments/instrument.model";
 import { HistoryResponse } from "../../../shared/models/history/history-response.model";
 import { SyntheticInstrumentsHelper } from "../utils/synthetic-instruments.helper";
+import { EnvironmentService } from "../../../shared/services/environment.service";
+import {
+  ExchangeSettings,
+  MarketExchange
+} from "../../../shared/models/market-settings.model";
 
 @Injectable()
 export class TechChartDatafeedService implements IBasicDataFeed {
-  private lastBarPoint = new Map<string, number>();
+  private readonly lastBarPoint = new Map<string, number>();
   private readonly barsSubscriptions = new Map<string, Subscription>();
+  private exchangeSettings: MarketExchange[] | null = null;
 
-  private onSymbolChange$ = new BehaviorSubject<InstrumentKey | null>(null);
-  get onSymbolChange() {
+  private readonly onSymbolChange$ = new BehaviorSubject<InstrumentKey | null>(null);
+  get onSymbolChange(): Observable<InstrumentKey | null> {
     return this.onSymbolChange$.asObservable();
   }
 
   constructor(
+    private readonly environmentService: EnvironmentService,
     private readonly subscriptionsDataFeedService: SubscriptionsDataFeedService,
     private readonly instrumentService: InstrumentsService,
     private readonly historyService: HistoryService,
@@ -59,24 +66,23 @@ export class TechChartDatafeedService implements IBasicDataFeed {
   ) {
   }
 
+  setExchangeSettings(settings: { exchange: string, settings: ExchangeSettings }[]): void {
+    this.exchangeSettings = settings;
+  }
+
   onReady(callback: OnReadyCallback): void {
-    this.translatorService.getTranslator('tech-chart/tech-chart')
-      .subscribe(t => {
+    this.translatorService.getTranslator('tech-chart/tech-chart').pipe(
+      take(1)
+    ).subscribe(t => {
         const config: DatafeedConfiguration = {
           supports_time: true,
           supported_resolutions: this.getSupportedResolutions(),
-          exchanges: [
-            {
-              value: 'MOEX',
-              name: t(['MOEX']),
-              desc: t(['MOEX'])
-            },
-            {
-              value: 'SPBX',
-              name: 'SPBX',
-              desc: 'SPBX'
-            }
-          ]
+          exchanges: (this.exchangeSettings ?? [])
+            .map(x => ({
+              value: x.exchange,
+              name: t([x.exchange], { fallback: x.exchange }),
+              desc: t([x.exchange], { fallback: x.exchange })
+            }))
         };
 
         setTimeout(() => callback(config), 0);
@@ -90,10 +96,6 @@ export class TechChartDatafeedService implements IBasicDataFeed {
     } as SearchFilter).pipe(
       take(1)
     ).subscribe(results => {
-      if (!results) {
-        return [];
-      }
-
       return onResult(results.map(x => ({
         symbol: x.symbol,
         exchange: x.exchange,
@@ -118,7 +120,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
           map(i => !!i
             ? {
               ...i,
-              symbol: `[${i.exchange}:${i.symbol}${i.instrumentGroup ? ':' + i.instrumentGroup : ''}]`
+              symbol: `[${i.exchange}:${i.symbol}${(i.instrumentGroup != null && i.instrumentGroup.length > 0) ? ':' + i.instrumentGroup : ''}]`
             }
             : i)
         );
@@ -135,6 +137,8 @@ export class TechChartDatafeedService implements IBasicDataFeed {
       const precision = MathHelper.getPrecision(instrumentDetails.minstep);
       const priceScale = Number((10 ** precision).toFixed(precision));
 
+      const instrumentExchange = (this.exchangeSettings ?? []).find(x => x.exchange === instrumentDetails.exchange);
+
       const resolve: LibrarySymbolInfo = {
         name: instrumentDetails.shortName,
         ticker: instrumentDetails.symbol,
@@ -150,9 +154,9 @@ export class TechChartDatafeedService implements IBasicDataFeed {
         has_empty_bars: false,
         has_intraday: true,
         has_seconds: true,
-        timezone: 'Europe/Moscow',
+        timezone:  instrumentExchange?.settings.timezone as Timezone ?? 'Europe/Moscow',
+        session: instrumentExchange?.settings.defaultTradingSession ?? '0700-0000,0000-0200',
         supported_resolutions: this.getSupportedResolutions(),
-        session: '24x7'
       };
 
       onResolve(resolve);
@@ -293,7 +297,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
         const lastBarPointKey = this.getLastBarPointKey(symbolInfo.ticker!, resolution);
         const lastBarPoint = this.lastBarPoint.get(lastBarPointKey);
 
-        if (!lastBarPoint || res.time < lastBarPoint) {
+        if (lastBarPoint == null || res.time < lastBarPoint) {
           return;
         }
 
@@ -305,7 +309,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
     this.barsSubscriptions.set(listenerGuid, sub);
   }
 
-  getBarsStream(instrument: InstrumentKey, resolution: ResolutionString, ticker: string) {
+  getBarsStream(instrument: InstrumentKey, resolution: ResolutionString, ticker: string): Observable<Candle> {
     const request: BarsRequest = {
       opcode: 'BarsGetAndSubscribe',
       code: instrument.symbol,
@@ -329,7 +333,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
     }
   }
 
-  clear() {
+  clear(): void {
     this.barsSubscriptions.forEach((sub) => {
         sub.unsubscribe();
       }
@@ -340,7 +344,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
   }
 
   getServerTime(callback: ServerTimeCallback): void {
-    this.http.get<number>(`${environment.apiUrl}//md/v2/time`).pipe(
+    this.http.get<number>(`${this.environmentService.apiUrl}/md/v2/time`).pipe(
       take(1)
     ).subscribe(time => {
       callback(time);
@@ -364,7 +368,7 @@ export class TechChartDatafeedService implements IBasicDataFeed {
     }
 
     if (code === 'H') {
-      return (count * 3600).toString();
+      return (count * 60 * 60).toString();
     }
 
     // resolution contains minutes

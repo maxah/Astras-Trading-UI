@@ -45,10 +45,13 @@ import { AngularFireMessagingModule } from "@angular/fire/compat/messaging";
 import { AngularFireModule } from "@angular/fire/compat";
 import {MobileHook} from "./shared/services/app-hook/mobile-hook";
 import { InitQueryParamsHook } from "./shared/services/app-hook/init-query-params-hook";
+import { NzI18nInterface } from "ng-zorro-antd/i18n/nz-i18n.interface";
+import { HashMap } from "@ngneat/transloco/lib/types";
+import { LoggingHook } from "./shared/services/app-hook/logging-hook";
 
 class CustomHandler implements TranslocoMissingHandler {
-  handle(key: string, config: TranslocoConfig, params?: any) {
-    return params?.fallback || '';
+  handle(key: string, config: TranslocoConfig, params?: HashMap): string {
+    return (params?.fallback ?? '') as string;
   }
 }
 
@@ -78,7 +81,7 @@ registerLocaleData(ru);
   providers: [
     {
       provide: NZ_I18N,
-      useFactory: (localId: string) => {
+      useFactory: (localId: string): NzI18nInterface => {
         switch (localId) {
           case 'en':
             return en_US;
@@ -132,6 +135,11 @@ registerLocaleData(ru);
     {
       provide: APP_HOOK,
       useClass: InitQueryParamsHook,
+      multi: true
+    },
+    {
+      provide: APP_HOOK,
+      useClass: LoggingHook,
       multi: true
     }
   ]

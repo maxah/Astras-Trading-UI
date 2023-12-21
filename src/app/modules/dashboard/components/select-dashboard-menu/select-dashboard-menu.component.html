@@ -14,31 +14,39 @@
           ></ats-editable-string>
         </div>
         <span class="actions">
-          <button (click)="copyDashboard(dashboard); $event.stopPropagation();"
-                  nz-button
-                  nzSize='small'
-                  nzType="link">
-                <i nz-icon nzType="copy"></i>
+          <button
+            (click)="copyDashboard(dashboard); $event.stopPropagation();"
+            nz-button
+            nzSize='small'
+            nzType="link"
+          >
+            <i nz-icon nzType="copy"></i>
           </button>
-          <button (click)="changeFavoriteDashboard(dashboard);$event.stopPropagation(); "
-                  nz-button
-                  nzSize='small'
-                  nzType="link">
-                <i nz-icon nzType="star" [nzTheme]="dashboard.isFavorite ? 'fill' : 'outline'"></i>
+          <button
+            (click)="changeFavoriteDashboard(dashboard);$event.stopPropagation(); "
+            nz-button
+            nzSize='small'
+            nzType="link"
+            class="favorite-btn"
+          >
+            <i nz-icon nzType="star" nzTheme="outline" [class.active]="dashboard.isFavorite"></i>
           </button>
-          <button (click)="removeDashboard(dashboard); $event.stopPropagation();" *ngIf="allDashboards.length > 1"
-                  nz-button
-                  nzSize='small'
-                  nzType="link">
-                <i nz-icon nzType="close"></i>
-              </button>
+          <button
+            *ngIf="allDashboards.length > 1"
+            (click)="removeDashboard(dashboard); $event.stopPropagation();"
+            nz-button
+            nzSize='small'
+            nzType="link"
+          >
+            <i nz-icon nzType="close"></i>
+          </button>
         </span>
       </div>
     </li>
     <li nz-menu-divider></li>
     <li>
       <div class="new-dashboard-menu-item">
-        <form [formGroup]="newDashboardForm" [nzLayout]="'inline'" nz-form>
+        <form [formGroup]="newDashboardForm!" [nzLayout]="'inline'" nz-form>
           <nz-form-item>
             <nz-form-control [nzErrorTip]="titleError">
               <input (keyup)="checkInputComplete($event)"
@@ -60,7 +68,7 @@
           </nz-form-item>
         </form>
 
-        <button (click)="addDashboard()" [disabled]="!newDashboardForm.valid" nz-button nzSize='small' nzType="link">
+        <button (click)="addDashboard()" [disabled]="!newDashboardForm?.valid" nz-button nzSize='small' nzType="link">
           <span nz-icon nzType="plus"></span></button>
       </div>
     </li>

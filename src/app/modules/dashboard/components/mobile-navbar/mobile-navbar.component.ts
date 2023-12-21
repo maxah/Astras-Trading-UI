@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Observable, shareReplay } from "rxjs";
+import { Observable, shareReplay, take } from "rxjs";
 import { PortfolioExtended } from "../../../../shared/models/user/portfolio-extended.model";
 import { Dashboard } from "../../../../shared/models/dashboard/dashboard.model";
 import { FormControl, UntypedFormControl } from "@angular/forms";
@@ -14,6 +14,7 @@ import { EntityStatus } from "../../../../shared/models/enums/entity-status";
 import { groupPortfoliosByAgreement } from "../../../../shared/utils/portfolios";
 import { defaultBadgeColor } from "../../../../shared/utils/instruments";
 import { PortfoliosFeature } from "../../../../store/portfolios/portfolios.reducer";
+import { NewYearHelper } from "../../utils/new-year.helper";
 
 @Component({
   selector: 'ats-mobile-navbar',
@@ -69,20 +70,32 @@ export class MobileNavbarComponent implements OnInit {
       );
 
     this.activeInstrument$ = this.dashboardContextService.instrumentsSelection$.pipe(
-      map(selection => selection[defaultBadgeColor])
+      map(selection => selection[defaultBadgeColor]!)
     );
+
+    this.portfolios$
+      .pipe(
+        take(1),
+      )
+      .subscribe(portfolios => {
+        const hasActivePortfolios = Array.from(portfolios.values()).some(p => p.length > 0);
+
+        if (!hasActivePortfolios) {
+          this.modal.openEmptyPortfoliosWarningModal();
+        }
+      });
   }
 
-  isFindedPortfolio(portfolio: PortfolioExtended) {
+  isFindedPortfolio(portfolio: PortfolioExtended): boolean {
     const { value } = this.searchControl;
-    return !value || (`${portfolio.market} ${portfolio.portfolio}`).toUpperCase().includes(value.toUpperCase());
+    return value == null || (`${portfolio.market} ${portfolio.portfolio}`).toUpperCase().includes((value).toUpperCase());
   }
 
-  logout() {
+  logout(): void {
     this.auth.logout();
   }
 
-  changePortfolio(key: PortfolioExtended) {
+  changePortfolio(key: PortfolioExtended): void {
     this.dashboardContextService.selectDashboardPortfolio({
       portfolio: key.portfolio,
       exchange: key.exchange,
@@ -90,19 +103,19 @@ export class MobileNavbarComponent implements OnInit {
     });
   }
 
-  changeInstrument(instrument: InstrumentKey | null) {
+  changeInstrument(instrument: InstrumentKey | null): void {
     if (instrument) {
       this.dashboardContextService.selectDashboardInstrument(instrument, defaultBadgeColor);
       this.instrumentControl.setValue(null);
     }
   }
 
-  openTerminalSettings() {
+  openTerminalSettings(): void {
     this.modal.openTerminalSettingsModal();
     this.closeSideMenu();
   }
 
-  openThirdPartyLink(link: string) {
+  openThirdPartyLink(link: string): void {
     window.open(link, "_blank", 'noopener,noreferrer');
   }
 
@@ -110,7 +123,7 @@ export class MobileNavbarComponent implements OnInit {
     return item.key;
   }
 
-  portfoliosTrackByFn(index: number, item: PortfolioExtended) {
+  portfoliosTrackByFn(index: number, item: PortfolioExtended): string {
     return item.market + item.portfolio;
   }
 
@@ -121,4 +134,6 @@ export class MobileNavbarComponent implements OnInit {
   closeSideMenu(): void {
     this.isSideMenuVisible = false;
   }
+
+  showNewYearIcon = NewYearHelper.showNewYearIcon;
 }

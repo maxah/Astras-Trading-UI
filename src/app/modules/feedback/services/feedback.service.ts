@@ -12,28 +12,29 @@ import {
   Subject,
   take
 } from 'rxjs';
-import { environment } from '../../../../environments/environment';
 import { LocalStorageService } from '../../../shared/services/local-storage.service';
 import { ErrorHandlerService } from '../../../shared/services/handle-error/error-handler.service';
 import { catchHttpError } from '../../../shared/utils/observable-helper';
 import { map } from 'rxjs/operators';
-import { LocalStorageConstants } from "../../../shared/constants/local-storage.constants";
+import { EnvironmentService } from "../../../shared/services/environment.service";
+import { LocalStorageCommonConstants } from "../../../shared/constants/local-storage.constants";
 
 @Injectable({
   providedIn: 'root'
 })
 export class FeedbackService {
   unansweredFeedbackRemoved$ = new Subject();
-  private readonly baseUrl = environment.apiUrl + '/astras';
+  private readonly baseUrl = this.environmentService.apiUrl + '/astras';
 
   constructor(
+    private readonly environmentService: EnvironmentService,
     private readonly httpClient: HttpClient,
     private readonly localStorage: LocalStorageService,
     private readonly errorHandlerService: ErrorHandlerService
   ) {
   }
 
-  setLastFeedbackCheck() {
+  setLastFeedbackCheck(): void {
     const meta = this.getSavedFeedbackMeta() ?? {};
     this.saveFeedbackMeta({
       ...meta,
@@ -41,7 +42,7 @@ export class FeedbackService {
     });
   }
 
-  setUnansweredFeedback(unansweredFeedback: UnansweredFeedback | null) {
+  setUnansweredFeedback(unansweredFeedback: UnansweredFeedback | null): void {
     const meta = this.getSavedFeedbackMeta() ?? {};
     this.saveFeedbackMeta({
       ...meta,
@@ -49,7 +50,7 @@ export class FeedbackService {
     });
   }
 
-  removeUnansweredFeedback() {
+  removeUnansweredFeedback(): void {
     const meta = this.getSavedFeedbackMeta() ?? {};
     this.saveFeedbackMeta({
       ...meta,
@@ -88,10 +89,10 @@ export class FeedbackService {
   }
 
   getSavedFeedbackMeta(): FeedbackMeta | null {
-    return this.localStorage.getItem<FeedbackMeta>(LocalStorageConstants.FeedbackStorageKey) ?? null;
+    return this.localStorage.getItem<FeedbackMeta>(LocalStorageCommonConstants.FeedbackStorageKey) ?? null;
   }
 
-  private saveFeedbackMeta(meta: FeedbackMeta) {
-    this.localStorage.setItem(LocalStorageConstants.FeedbackStorageKey, meta);
+  private saveFeedbackMeta(meta: FeedbackMeta): void {
+    this.localStorage.setItem(LocalStorageCommonConstants.FeedbackStorageKey, meta);
   }
 }

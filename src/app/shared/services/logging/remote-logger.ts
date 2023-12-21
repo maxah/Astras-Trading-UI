@@ -1,36 +1,29 @@
-import {
-  LoggerBase,
-  LogLevel
-} from './logger-base';
+import { LoggerBase } from './logger-base';
 import { Injectable } from '@angular/core';
 import { GuidGenerator } from '../../utils/guid';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { LocalStorageService } from '../local-storage.service';
-import { environment } from '../../../../environments/environment';
+import {
+  EnvironmentService,
+  LogLevel,
+  RemoteLoggerConfig
+} from "../environment.service";
+import { LocalStorageLoggingConstants } from "../../constants/local-storage.constants";
 
 interface LogEntry {
-  timestamp: string,
-  logLevel: LogLevel,
-  message: string,
-  stack?: string,
-  sessionId: string,
-  login: string,
-  environment: 'local' | 'dev' | 'prod'
+  timestamp: string;
+  logLevel: LogLevel;
+  message: string;
+  stack?: string;
+  sessionId: string;
+  login: string;
+  device: string;
+  browser: string;
+  version: string;
+  environment: 'local' | 'dev' | 'prod';
 }
-
-interface RemoteLoggerConfig {
-  minLevel: LogLevel,
-  environment: 'local' | 'dev' | 'prod',
-
-  loggingServerUrl: string,
-  authorization: {
-    name: string,
-    password: string
-  }
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -42,7 +35,8 @@ export class RemoteLogger extends LoggerBase {
 
   constructor(
     private readonly localStorageService: LocalStorageService,
-    private readonly httpClient: HttpClient
+    private readonly httpClient: HttpClient,
+    private readonly environmentService: EnvironmentService
   ) {
     super();
 
@@ -56,10 +50,10 @@ export class RemoteLogger extends LoggerBase {
       );
   }
 
-  public isLoggerRequest(url: string) {
+  public isLoggerRequest(url: string): boolean {
     const loggerUrl = this.getConfig()?.loggingServerUrl;
 
-    if (!loggerUrl) {
+    if (loggerUrl == null) {
       return false;
     }
 
@@ -97,12 +91,15 @@ export class RemoteLogger extends LoggerBase {
       message: message,
       stack: stack ?? '',
       sessionId: this.guid,
-      login: this.localStorageService.getItem<any>('user')?.login ?? '',
+      login: this.localStorageService.getItem<string>(LocalStorageLoggingConstants.UserLoginStorageKey) ?? '',
+      version: this.localStorageService.getItem<string>(LocalStorageLoggingConstants.AppVersionStorageKey) ?? '',
+      device: this.localStorageService.getItem<string>(LocalStorageLoggingConstants.DeviceStorageKey) ?? '',
+      browser: this.localStorageService.getItem<string>(LocalStorageLoggingConstants.BrowserStorageKey) ?? '',
       environment: this.getConfig()!.environment
     };
   }
 
-  private flushBuffer() {
+  private flushBuffer(): void {
     try {
       const config = this.getConfig()!;
 
@@ -122,13 +119,13 @@ export class RemoteLogger extends LoggerBase {
               currentValue
             ];
           },
-          [] as any[]
+          [] as (LogEntry | { index: { _index: string} })[]
         );
 
 
         this.httpClient.post(
           `${config.loggingServerUrl}/_bulk`,
-          bulkData.map(x => JSON.stringify(x)).join('\n') + '\n',
+          bulkData.map(x => JSON.stringify(x)).join('\n') as string + '\n',
           {
             headers: {
               'Content-Type': 'application/json',
@@ -143,7 +140,7 @@ export class RemoteLogger extends LoggerBase {
   }
   private getConfig(): RemoteLoggerConfig | null {
     if (this.config === undefined) {
-      this.config = (environment.logging as any)?.remote as RemoteLoggerConfig ?? null;
+      this.config = this.environmentService.logging.remote ?? null;
     }
 
     return this.config;

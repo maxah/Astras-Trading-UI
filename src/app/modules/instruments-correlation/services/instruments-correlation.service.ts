@@ -14,15 +14,16 @@ import {
   HttpClient,
   HttpErrorResponse
 } from "@angular/common/http";
-import { environment } from "../../../../environments/environment";
 import { catchHttpError } from "../../../shared/utils/observable-helper";
 import { map } from "rxjs/operators";
+import { EnvironmentService } from "../../../shared/services/environment.service";
 
 @Injectable({
   providedIn: 'root'
 })
 export class InstrumentsCorrelationService {
   constructor(
+    private readonly environmentService: EnvironmentService,
     private readonly httpClient: HttpClient
   ) {
   }
@@ -47,7 +48,7 @@ export class InstrumentsCorrelationService {
           i.symbol
         ];
 
-        if (i.instrumentGroup) {
+        if (i.instrumentGroup != null && i.instrumentGroup.length > 0) {
           parts.push(i.instrumentGroup);
         }
 
@@ -55,7 +56,7 @@ export class InstrumentsCorrelationService {
       }).join(',');
 
     return this.httpClient.get<CorrelationMatrix>(
-      `${environment.apiUrl}/timeseriesanalyser/tsa`,
+      `${this.environmentService.apiUrl}/timeseriesanalyser/tsa`,
       {
         params: {
           tickers,
@@ -72,11 +73,11 @@ export class InstrumentsCorrelationService {
     );
   }
 
-  private getError(error: HttpErrorResponse): { errorCode: InstrumentsCorrelationErrorCodes; errorMessage?: string } {
+  private getError(error: HttpErrorResponse): { errorCode: InstrumentsCorrelationErrorCodes, errorMessage?: string } {
     if (/^(\[.+\])/.test(error.error ?? '')) {
       return {
         errorCode: InstrumentsCorrelationErrorCodes.NotTradingInstruments,
-        errorMessage: error.error.error
+        errorMessage: error.error.error as string
       };
     }
 

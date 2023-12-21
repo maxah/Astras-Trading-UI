@@ -38,12 +38,12 @@ export enum ScalperOrderBookMouseAction {
 }
 
 export interface ScalperOrderBookMouseActionsMapItem {
-  button: 'left' | 'right',
+  button: 'left' | 'right';
 
-  orderBookRowType: 'ask' | 'bid' | 'spread' | 'any',
+  orderBookRowType: 'ask' | 'bid' | 'spread' | 'any';
 
-  modifier?: 'shift' | 'ctrl' | null,
-  action: ScalperOrderBookMouseAction
+  modifier?: 'shift' | 'ctrl' | null;
+  action: ScalperOrderBookMouseAction;
 }
 
 export interface ScalperOrderBookMouseActionsMap {
@@ -62,7 +62,7 @@ export interface DesignSettings {
   gridType?: GridType;
 }
 
-export interface PortfolioCurrency {
+export interface PortfolioCurrencySettings {
   portfolio: PortfolioKey;
   currency: string;
 }
@@ -98,6 +98,6 @@ export interface TerminalSettings {
   hotKeysSettings?: HotKeysSettings;
   scalperOrderBookMouseActions?: ScalperOrderBookMouseActionsMap;
   designSettings?: DesignSettings;
-  portfoliosCurrency?: PortfolioCurrency[];
+  portfoliosCurrency?: PortfolioCurrencySettings[];
   instantNotificationsSettings?: InstantNotificationsSettings;
 }

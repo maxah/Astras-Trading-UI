@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from "@angular/common/http";
-import { environment } from "../../../../environments/environment";
 import { interval, Observable, switchMap } from "rxjs";
 import { NewsListItem } from "../models/news.model";
 import { catchHttpError } from "../../../shared/utils/observable-helper";
 import { ErrorHandlerService } from "../../../shared/services/handle-error/error-handler.service";
 import { PositionsService } from "../../../shared/services/positions.service";
-import { filter } from "rxjs/operators";
 import { DashboardContextService } from "../../../shared/services/dashboard-context.service";
+import { EnvironmentService } from "../../../shared/services/environment.service";
 
 interface GetNewsParams {
   limit: number;
@@ -19,10 +18,11 @@ interface GetNewsParams {
   providedIn: 'root'
 })
 export class NewsService {
-  private newsUrl = environment.apiUrl + '/news/news';
+  private readonly newsUrl = this.environmentService.apiUrl + '/news/news';
 
   constructor(
-    private http: HttpClient,
+    private readonly environmentService: EnvironmentService,
+    private readonly http: HttpClient,
     private readonly errorHandlerService: ErrorHandlerService,
     private readonly dashboardContextService: DashboardContextService,
     private readonly positionsService: PositionsService
@@ -38,14 +38,13 @@ export class NewsService {
       }
     })
       .pipe(
-        catchHttpError<Array<NewsListItem>>([], this.errorHandlerService)
+        catchHttpError<NewsListItem[]>([], this.errorHandlerService)
       );
   }
 
   public getNewsByPortfolio(params: GetNewsParams): Observable<NewsListItem[]> {
     return this.dashboardContextService.selectedPortfolio$
       .pipe(
-        filter(p => !!p),
         switchMap(p => this.positionsService.getAllByPortfolio(p!.portfolio, p!.exchange)),
         switchMap(positions => this.getNews({...params, symbols: (positions ?? []).map(p => p.symbol)}))
       );
@@ -60,14 +59,13 @@ export class NewsService {
             symbols
           })
         ),
-        catchHttpError<Array<NewsListItem>>([], this.errorHandlerService)
+        catchHttpError<NewsListItem[]>([], this.errorHandlerService)
       );
   }
 
   public getNewNewsByPortfolio(): Observable<NewsListItem[]> {
     return this.dashboardContextService.selectedPortfolio$
       .pipe(
-        filter(p => !!p),
         switchMap(p => this.positionsService.getAllByPortfolio(p!.portfolio, p!.exchange)),
         switchMap(positions => this.getNewNews((positions ?? []).map(p => p.symbol))),
       );

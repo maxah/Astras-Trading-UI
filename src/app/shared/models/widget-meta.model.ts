@@ -2,7 +2,15 @@
   default: string;
   translations?: {
     [key: string]: string;
-  }
+  };
+}
+
+export enum WidgetCategory {
+  All = 'all',
+  ChartsAndOrderbooks = 'chartsAndOrderbooks',
+  PositionsTradesOrders = 'positionsTradesOrders',
+  Info = 'info',
+  Details = 'details'
 }
 
 export interface ApplicationAdapterConfig {
@@ -11,8 +19,8 @@ export interface ApplicationAdapterConfig {
 }
 
 export interface WidgetDefinition {
-  adapter: 'application',
-  config: ApplicationAdapterConfig
+  adapter: 'application';
+  config: ApplicationAdapterConfig;
 }
 
 export interface WidgetMeta {
@@ -27,6 +35,8 @@ export interface WidgetMeta {
 
   hasInstrumentBind?: boolean;
 
+  category: WidgetCategory;
+
   /**
    * Desktop specific meta information. Skip if widget is not applicable on desktop
    */
@@ -37,17 +47,17 @@ export interface WidgetMeta {
      * Options used when widget is adding to dashboard
      */
     addOptions: {
-      initialPosition?: 'auto' | 'top' | 'below'
-      isFullWidth: boolean
-      initialHeight?: number,
-      initialHeightPx?: number,
-      initialWidth?: number
-    },
+      initialPosition?: 'auto' | 'top' | 'below';
+      isFullWidth: boolean;
+      initialHeight?: number;
+      initialHeightPx?: number;
+      initialWidth?: number;
+    };
 
     /**
-     * Used to sort widgets in gallery (widgets menu)
+     * Used to sort widgets in gallery
      */
-    galleryOrder: number;
+    galleryOrder?: number;
     enabled: boolean;
   };
 
@@ -58,5 +68,6 @@ export interface WidgetMeta {
     ribbonIcon: string;
     enabled: boolean;
     widgetName?: WidgetName;
-  }
+    galleryOrder: number;
+  };
 }

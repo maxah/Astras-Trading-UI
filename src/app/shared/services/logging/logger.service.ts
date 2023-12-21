@@ -4,9 +4,9 @@ import {
 } from "@angular/core";
 import {
   LOGGER,
-  LoggerBase,
-  LogLevel
+  LoggerBase
 } from './logger-base';
+import { LogLevel } from "../environment.service";
 
 @Injectable({
   providedIn: 'root'
@@ -42,7 +42,7 @@ export class LoggerService {
     );
   }
 
-  private logMessage(logLevel: LogLevel, message: string, stack?: string) {
+  private logMessage(logLevel: LogLevel, message: string, stack?: string): void {
     this.loggers.forEach(l => l.logMessage(logLevel, message, stack));
   }
 }

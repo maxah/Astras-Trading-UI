@@ -11,7 +11,6 @@ import {
   HttpClientTestingModule,
   HttpTestingController
 } from "@angular/common/http/testing";
-import { environment } from "../../../../environments/environment";
 import {
   DatafeedConfiguration,
   LibrarySymbolInfo,
@@ -31,6 +30,8 @@ import { TranslatorService } from "../../../shared/services/translator.service";
 import { SyntheticInstrumentsService } from "./synthetic-instruments.service";
 import { getRandomInt } from "../../../shared/utils/testing";
 import { BarsRequest } from "../../light-chart/models/bars-request.model";
+import { EnvironmentService } from "../../../shared/services/environment.service";
+import { ExchangeSettings } from "../../../shared/models/market-settings.model";
 
 describe('TechChartDatafeedService', () => {
   let service: TechChartDatafeedService;
@@ -40,6 +41,7 @@ describe('TechChartDatafeedService', () => {
   let syntheticInstrumentsServiceSpy: any;
   let historyServiceSpy: any;
   let httpTestingController: HttpTestingController;
+  const apiUrl = 'apiUrl';
 
   beforeEach(() => {
     instrumentsServiceSpy = jasmine.createSpyObj('InstrumentsService', ['getInstrument', 'getInstruments']);
@@ -71,6 +73,12 @@ describe('TechChartDatafeedService', () => {
         {
           provide: SyntheticInstrumentsService,
           useValue: syntheticInstrumentsServiceSpy
+        },
+        {
+          provide: EnvironmentService,
+          useValue: {
+            apiUrl
+          }
         }
       ]
     });
@@ -88,6 +96,13 @@ describe('TechChartDatafeedService', () => {
   });
 
   it('#onReady should provide config', fakeAsync(() => {
+    service.setExchangeSettings([
+      {
+        exchange: "MOEX",
+        settings: {} as ExchangeSettings
+      }
+    ]);
+
       const expectedConfig: DatafeedConfiguration = {
         supports_time: true,
         supported_resolutions: [
@@ -111,11 +126,6 @@ describe('TechChartDatafeedService', () => {
             value: 'MOEX',
             name: 'Московская Биржа',
             desc: 'Московская Биржа'
-          },
-          {
-            value: 'SPBX',
-            name: 'SPBX',
-            desc: 'SPBX'
           }
         ]
       };
@@ -134,12 +144,22 @@ describe('TechChartDatafeedService', () => {
       expect(serverTime).toBe(expectedTime);
     });
 
-    const request = httpTestingController.expectOne(`${environment.apiUrl}//md/v2/time`);
+    const request = httpTestingController.expectOne(`${apiUrl}/md/v2/time`);
     expect(request.request.method).toEqual('GET');
     request.flush(expectedTime);
   });
 
   it('#resolveSymbol should pass value to onResolve callback', fakeAsync(() => {
+    service.setExchangeSettings([
+      {
+        exchange: "MOEX",
+        settings: {
+          timezone: 'Europe/Moscow',
+          defaultTradingSession: '24x7'
+        } as ExchangeSettings
+      }
+    ]);
+
     const instrumentDetails = {
       symbol: 'SBER',
       exchange: 'MOEX',

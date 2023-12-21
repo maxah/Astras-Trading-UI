@@ -3,13 +3,14 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Inject,
   Input,
   OnDestroy,
   OnInit,
   QueryList,
   ViewChildren
 } from '@angular/core';
-import {OptionBoardDataContext} from "../../models/option-board-data-context.model";
+import { OptionBoardDataContext, OptionsSelection } from "../../models/option-board-data-context.model";
 import {OptionBoardService} from "../../services/option-board.service";
 import {BehaviorSubject, combineLatest, forkJoin, Observable, of, shareReplay, switchMap, take, tap, timer} from "rxjs";
 import {OptionKey, OptionSide} from "../../models/option-board.model";
@@ -20,9 +21,10 @@ import {ContentSize} from "../../../../shared/models/dashboard/dashboard-item.mo
 import {mapWith} from "../../../../shared/utils/observable-helper";
 import {MathHelper} from "../../../../shared/utils/math-helper";
 import {WidgetSettingsService} from "../../../../shared/services/widget-settings.service";
-import {DashboardContextService} from "../../../../shared/services/dashboard-context.service";
 import {defaultBadgeColor} from "../../../../shared/utils/instruments";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { ActionsContext } from 'src/app/shared/services/actions-context';
+import { ACTIONS_CONTEXT } from "../../../../shared/services/actions-context";
 
 interface DetailsDisplay extends OptionKey {
   underlyingAssetSymbol: string;
@@ -39,7 +41,7 @@ interface DetailsDisplay extends OptionKey {
   bid: number;
   volatility: number;
   price: number;
-  delta: number
+  delta: number;
   gamma: number;
   vega: number;
   theta: number;
@@ -141,7 +143,8 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
     private readonly optionBoardService: OptionBoardService,
     private readonly translatorService: TranslatorService,
     private readonly widgetSettingsService: WidgetSettingsService,
-    private readonly dashboardContextService: DashboardContextService,
+    @Inject(ACTIONS_CONTEXT)
+    private readonly actionsContext: ActionsContext,
     private readonly destroyRef: DestroyRef
   ) {
   }
@@ -159,18 +162,18 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
     return date.toLocaleDateString();
   }
 
-  unselectOption($event: Event, option: DetailsDisplay) {
+  unselectOption($event: Event, option: DetailsDisplay): void {
     $event.preventDefault();
     $event.stopPropagation();
 
     this.dataContext.removeItemFromSelection(option.symbol);
   }
 
-  clearSelection() {
+  clearSelection(): void {
     this.dataContext.clearCurrentSelection();
   }
 
-  updateContainerSize(entries: ResizeObserverEntry[]) {
+  updateContainerSize(entries: ResizeObserverEntry[]): void {
     entries.forEach(x => {
       this.contentSize$.next({
         width: Math.floor(x.contentRect.width),
@@ -181,7 +184,7 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
 
   ngAfterViewInit(): void {
     const tableRef$ = this.tableQuery.changes.pipe(
-      map(x => x.first),
+      map(x => x.first as ElementRef<HTMLElement> | undefined),
       startWith(this.tableQuery.first),
       filter((x): x is ElementRef<HTMLElement> => !!x),
       shareReplay(1)
@@ -205,7 +208,7 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
     );
   }
 
-  selectOption($event: Event, optionKey: OptionKey) {
+  selectOption($event: Event, optionKey: OptionKey): void {
     $event.preventDefault();
     $event.stopPropagation();
 
@@ -216,17 +219,17 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
         this.widgetSettingsService.updateSettings(settings.guid, {linkToActive: false});
       }
 
-      this.dashboardContextService.selectDashboardInstrument(
+      this.actionsContext.instrumentSelected(
         {
           symbol: optionKey.symbol,
           exchange: optionKey.exchange
         },
-        defaultBadgeColor
+        settings.badgeColor ?? defaultBadgeColor
       );
     });
   }
 
-  private initDetailsDisplay() {
+  private initDetailsDisplay(): void {
     const refreshTimer$ = timer(0, 60000).pipe(
       // for some reasons timer pipe is not completed in detailsDisplay$ when component destroyed (https://github.com/alor-broker/Astras-Trading-UI/issues/1176)
       // so we need to add takeUntil condition for this stream separately
@@ -237,7 +240,7 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
       mapWith(() => refreshTimer$, source => source),
       tap(() => this.isLoading$.next(true)),
       switchMap(selection => {
-        if (!selection || selection.selectedOptions.length === 0) {
+        if ((selection as OptionsSelection | null)?.selectedOptions.length === 0) {
           return of([]);
         }
 
@@ -280,7 +283,7 @@ export class SelectedOptionsComponent implements OnInit, AfterViewInit, OnDestro
     );
   }
 
-  private initColumns() {
+  private initColumns(): void {
     this.displayColumns$ = this.translatorService.getTranslator('option-board/selected-options').pipe(
       map(t => this.columnsConfig.map(c => this.toDisplayColumn(c, t))),
       shareReplay(1)

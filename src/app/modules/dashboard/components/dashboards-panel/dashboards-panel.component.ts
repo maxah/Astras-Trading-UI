@@ -7,20 +7,21 @@ import {
 } from '@angular/core';
 import {
   BehaviorSubject,
+  combineLatest,
   Observable,
   shareReplay,
   take,
   tap,
   withLatestFrom
 } from "rxjs";
-import { Dashboard, DefaultDashboardName } from "../../../../shared/models/dashboard/dashboard.model";
+import { Dashboard } from "../../../../shared/models/dashboard/dashboard.model";
 import { NzSegmentedOption } from "ng-zorro-antd/segmented/types";
-import { mapWith } from "../../../../shared/utils/observable-helper";
 import { debounceTime, map } from "rxjs/operators";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ManageDashboardsService } from "../../../../shared/services/manage-dashboards.service";
 import { TranslatorService } from "../../../../shared/services/translator.service";
 import { CdkDragDrop } from "@angular/cdk/drag-drop";
+import { DashboardTitleHelper } from "../../utils/dashboard-title.helper";
 
 interface DashboardSegmentedOption extends NzSegmentedOption {
   value: string;
@@ -46,15 +47,14 @@ export class DashboardsPanelComponent implements OnInit, OnDestroy {
   ) {
   }
 
-  ngOnInit() {
-    const allDashboards$ = this.translatorService.getTranslator('dashboard/select-dashboard-menu').pipe(
-      mapWith(
-        () => this.manageDashboardsService.allDashboards$,
-        (t, dashboards) => ({ t, dashboards })
-      ),
-      map(data => data.dashboards.map(d => ({
+  ngOnInit(): void {
+    const allDashboards$ = combineLatest({
+      translator: this.translatorService.getTranslator('dashboard/select-dashboard-menu'),
+      dashboards: this.manageDashboardsService.allDashboards$,
+    }).pipe(
+      map(x => x.dashboards.map(d => ({
         ...d,
-        title: d.title.includes(DefaultDashboardName) ? d.title.replace(DefaultDashboardName, data.t(['defaultDashboardName'])) : d.title
+        title: DashboardTitleHelper.getDisplayTitle(d, x.translator)
       }))),
       shareReplay(1)
     );
@@ -94,11 +94,11 @@ export class DashboardsPanelComponent implements OnInit, OnDestroy {
         const selectedDashboard: Dashboard = dashboards.find((d: Dashboard) => d.isSelected)!;
         const updatedLastSelectedDashboard: Dashboard | undefined = dashboards.find(d => d.guid === lastSelectedDashboard?.guid);
 
-        if (!updatedLastSelectedDashboard || updatedLastSelectedDashboard.isFavorite) {
-          this.lastSelectedDashboard$.next(dashboards.find(d => !d.isFavorite) ?? null);
+        if (!updatedLastSelectedDashboard || (updatedLastSelectedDashboard.isFavorite ?? false)) {
+          this.lastSelectedDashboard$.next(dashboards.find(d => !(d.isFavorite ?? false)) ?? null);
         }
 
-        if (selectedDashboard.guid !== updatedLastSelectedDashboard?.guid && !selectedDashboard.isFavorite) {
+        if (selectedDashboard.guid !== updatedLastSelectedDashboard?.guid && !(selectedDashboard.isFavorite ?? false)) {
           this.lastSelectedDashboard$.next(selectedDashboard);
         }
 
@@ -112,22 +112,22 @@ export class DashboardsPanelComponent implements OnInit, OnDestroy {
       .subscribe(i => this.selectedDashboardIndex$.next(i));
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.selectedDashboardIndex$.complete();
     this.isDashboardSelectionMenuVisible$.complete();
     this.lastSelectedDashboard$.complete();
     this.dropdownTrigger$.complete();
   }
 
-  changeDashboardSelectionMenuVisibility(value: boolean) {
+  changeDashboardSelectionMenuVisibility(value: boolean): void {
     setTimeout(() => this.isDashboardSelectionMenuVisible$.next(value));
   }
 
-  selectDashboard(guid: string) {
+  selectDashboard(guid: string): void {
     this.manageDashboardsService.selectDashboard(<string>guid);
   }
 
-  changeDashboardsOrder(e: CdkDragDrop<any>) {
+  changeDashboardsOrder(e: CdkDragDrop<any>): void {
     this.favoriteDashboards$
       .pipe(
         take(1)

@@ -4,7 +4,7 @@ import {
   OnInit
 } from '@angular/core';
 import { ControlValueAccessorBaseComponent } from '../../../../shared/components/control-value-accessor-base/control-value-accessor-base.component';
-import { PortfolioCurrency } from '../../../../shared/models/terminal-settings/terminal-settings.model';
+import { PortfolioCurrencySettings } from '../../../../shared/models/terminal-settings/terminal-settings.model';
 import {
   AbstractControl,
   NG_VALUE_ACCESSOR,
@@ -13,8 +13,8 @@ import {
   UntypedFormGroup,
   Validators
 } from '@angular/forms';
-import { Store } from '@ngrx/store';
 import {
+  combineLatest,
   forkJoin,
   Observable,
   of,
@@ -22,11 +22,14 @@ import {
   switchMap,
   take
 } from 'rxjs';
-import { map } from 'rxjs/operators';
+import {
+  map
+} from 'rxjs/operators';
 import { MarketService } from '../../../../shared/services/market.service';
-import { ExchangeRate } from '../../../exchange-rate/models/exchange-rate.model';
-import { CurrencyInstrument } from '../../../../shared/models/enums/currencies.model';
-import { ExchangeRateService } from '../../../../shared/services/exchange-rate.service';
+import {
+  CurrencyPair,
+  ExchangeRateService
+} from '../../../../shared/services/exchange-rate.service';
 import {UserPortfoliosService} from "../../../../shared/services/user-portfolios.service";
 
 @Component({
@@ -41,14 +44,13 @@ import {UserPortfoliosService} from "../../../../shared/services/user-portfolios
     }
   ]
 })
-export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseComponent<PortfolioCurrency[]> implements OnInit, OnDestroy {
-  form!: UntypedFormArray;
-  currencies$!: Observable<ExchangeRate[]>;
+export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseComponent<PortfolioCurrencySettings[]> implements OnInit, OnDestroy {
+  form?: UntypedFormArray;
+  currencies$!: Observable<CurrencyPair[]>;
 
   private formSubscriptions?: Subscription;
 
   constructor(
-    private readonly store: Store,
     private readonly marketService: MarketService,
     private readonly exchangeRateService: ExchangeRateService,
     private readonly userPortfoliosService: UserPortfoliosService
@@ -56,19 +58,23 @@ export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseCom
     super();
   }
 
-  writeValue(value: PortfolioCurrency[] | null): void {
+  writeValue(value: PortfolioCurrencySettings[] | null): void {
     this.initForm(value);
   }
 
   ngOnInit(): void {
-    this.currencies$ = this.exchangeRateService.getCurrencies()
-      .pipe(
-        map(cur => ([
-          ...cur.filter(c => c.secondCode === 'RUB'),
+    this.currencies$ = combineLatest(
+      {
+        allCurrencies: this.exchangeRateService.getCurrencyPairs(),
+        marketSettings: this.marketService.getMarketSettings()
+      }
+    ).pipe(
+        map(x => ([
+          ...x.allCurrencies.filter(c => c.secondCode === x.marketSettings.currencies.baseCurrency),
           {
-            firstCode: 'RUB',
-            secondCode: 'RUB',
-            symbolTom: CurrencyInstrument.RUB
+            firstCode: x.marketSettings.currencies.baseCurrency,
+            secondCode: x.marketSettings.currencies.baseCurrency,
+            symbolTom: x.marketSettings.currencies.baseCurrency
           }
         ]))
       );
@@ -96,7 +102,7 @@ export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseCom
     return this.form.touched;
   }
 
-  private initForm(currentValue: PortfolioCurrency[] | null) {
+  private initForm(currentValue: PortfolioCurrencySettings[] | null): void {
     this.getPortfolioCurrencies(currentValue ?? []).pipe(
       take(1)
     ).subscribe(portfolios => {
@@ -109,10 +115,10 @@ export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseCom
         }))
       );
 
-      const emit = () => {
+      const emit = (): void => {
         this.emitValue(
-          this.form.valid
-            ? (this.form.value ?? []) as PortfolioCurrency[]
+          this.form!.valid
+            ? (this.form!.value ?? []) as PortfolioCurrencySettings[]
             : null
         );
       };
@@ -127,7 +133,7 @@ export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseCom
     });
   }
 
-  private getPortfolioCurrencies(currentSettings: PortfolioCurrency[]): Observable<PortfolioCurrency[]> {
+  private getPortfolioCurrencies(currentSettings: PortfolioCurrencySettings[]): Observable<PortfolioCurrencySettings[]> {
     return this.userPortfoliosService.getPortfolios()
       .pipe(
         switchMap(portfolios => {
@@ -143,7 +149,7 @@ export class PortfoliosCurrencyFormComponent extends ControlValueAccessorBaseCom
                     pc => pc.portfolio.portfolio === portfolio.portfolio && pc.portfolio.exchange === portfolio.exchange
                   );
 
-                  return existingSettings || { portfolio, currency: p.currencyInstrument };
+                  return existingSettings ?? { portfolio, currency: p.defaultPortfolioCurrencyInstrument };
                 }))
             )
           );

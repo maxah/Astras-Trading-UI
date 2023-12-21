@@ -19,7 +19,6 @@ import {
   startWith
 } from 'rxjs/operators';
 import { BlotterService } from '../../services/blotter.service';
-import { MathHelper } from '../../../../shared/utils/math-helper';
 import { TimezoneConverterService } from '../../../../shared/services/timezone-converter.service';
 import { WidgetSettingsService } from "../../../../shared/services/widget-settings.service";
 import {
@@ -29,7 +28,6 @@ import { TableSettingHelper } from '../../../../shared/utils/table-setting.helpe
 import { TranslatorService } from "../../../../shared/services/translator.service";
 import { mapWith } from "../../../../shared/utils/observable-helper";
 import { ColumnsNames, TableNames } from '../../models/blotter-settings.model';
-import { NzTableFilterList } from "ng-zorro-antd/table/src/table.types";
 import { BaseColumnSettings } from "../../../../shared/models/settings/table-settings.model";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { BaseTableComponent } from "../base-table/base-table.component";
@@ -52,7 +50,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'id',
       displayName: 'Id',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => Number(a.id) - Number(b.id),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => Number(a.id) - Number(b.id),
       filterData: {
         filterName: 'id',
         isDefaultFilter: false
@@ -63,7 +61,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'orderno',
       displayName: 'Заявка',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => Number(a.orderno) - Number(b.orderno),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => Number(a.orderno) - Number(b.orderno),
       filterData: {
         filterName: 'orderno',
         isDefaultFilter: false
@@ -75,7 +73,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'symbol',
       displayName: 'Тикер',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => a.symbol.localeCompare(b.symbol),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => a.symbol.localeCompare(b.symbol),
       filterData: {
         filterName: 'symbol',
         isDefaultFilter: false
@@ -87,7 +85,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'side',
       displayName: 'Сторона',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => a.side.toString().localeCompare(b.side.toString()),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => a.side.toString().localeCompare(b.side.toString()),
       filterData: {
         filterName: 'side',
         isDefaultFilter: true,
@@ -103,7 +101,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'qty',
       displayName: 'Кол-во',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => Number(a.qty) - Number(b.qty),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => Number(a.qty) - Number(b.qty),
       tooltip: 'Количество сделок',
       minWidth: 65
     },
@@ -111,14 +109,14 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'price',
       displayName: 'Цена',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => Number(a.price) - Number(b.price),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => Number(a.price) - Number(b.price),
       tooltip: 'Цена'
     },
     {
       id: 'date',
       displayName: 'Время',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => Number(a.date) - Number(b.date),
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => Number(a.date) - Number(b.date),
       tooltip: 'Время совершения сделки',
       minWidth: 60
     },
@@ -126,7 +124,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
       id: 'volume',
       displayName: 'Объем',
       sortOrder: null,
-      sortFn: (a: DisplayTrade, b: DisplayTrade) => b.volume - a.volume,
+      sortFn: (a: DisplayTrade, b: DisplayTrade): number => b.volume - a.volume,
       tooltip: 'Объём',
       minWidth: 60
     },
@@ -151,7 +149,7 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
 
     this.settings$.pipe(
       distinctUntilChanged((previous, current) =>
-        TableSettingHelper.isTableSettingsEqual(previous?.tradesTable, current.tradesTable)
+        TableSettingHelper.isTableSettingsEqual(previous.tradesTable, current.tradesTable)
         && previous.badgeColor === current.badgeColor
       ),
       mapWith(
@@ -174,8 +172,8 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
               ? {
                 ...column.column.filterData,
                 filterName: t(['columns', column.column.id, 'name'], {fallback: column.column.displayName}),
-                filters: (<NzTableFilterList>column.column.filterData?.filters ?? []).map(f => ({
-                  value: f.value,
+                filters: (column.column.filterData.filters ?? []).map(f => ({
+                  value: f.value as unknown,
                   text: t(['columns', column.column.id, 'listOfFilter', f.value], {fallback: f.text})
                 }))
               }
@@ -203,7 +201,6 @@ export class TradesComponent extends BaseTableComponent<DisplayTrade, TradeFilte
     ).pipe(
       map(([trades, converter]) => trades.map(t => <DisplayTrade>{
         ...t,
-        volume: MathHelper.round(t.qtyUnits * t.price, 2),
         date: converter.toTerminalDate(t.date)
       })),
       mergeMap(trades => this.filter$.pipe(

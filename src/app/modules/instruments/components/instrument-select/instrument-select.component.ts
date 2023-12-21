@@ -35,11 +35,15 @@ import {
   WatchlistType
 } from '../../models/watchlist.model';
 import { DOCUMENT } from '@angular/common';
-import { DashboardContextService } from '../../../../shared/services/dashboard-context.service';
 import { InstrumentSelectSettings } from '../../models/instrument-select-settings.model';
 import { DomHelper } from "../../../../shared/utils/dom-helper";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { WatchListTitleHelper } from "../../utils/watch-list-title.helper";
+import {
+  ACTIONS_CONTEXT,
+  ActionsContext
+} from 'src/app/shared/services/actions-context';
+import { defaultBadgeColor } from "../../../../shared/utils/instruments";
 
 @Component({
   selector: 'ats-instrument-select',
@@ -60,13 +64,14 @@ export class InstrumentSelectComponent implements OnInit {
   settings$!: Observable<InstrumentSelectSettings>;
   currentWatchlist$!: Observable<Watchlist>;
   getTitleTranslationKey = WatchListTitleHelper.getTitleTranslationKey;
-  private filter$: BehaviorSubject<SearchFilter | null> = new BehaviorSubject<SearchFilter | null>(null);
+  private readonly filter$: BehaviorSubject<SearchFilter | null> = new BehaviorSubject<SearchFilter | null>(null);
 
   constructor(
     private readonly service: InstrumentsService,
-    private readonly dashboardContextService: DashboardContextService,
     private readonly settingsService: WidgetSettingsService,
     private readonly watchlistCollectionService: WatchlistCollectionService,
+    @Inject(ACTIONS_CONTEXT)
+    private readonly actionsContext: ActionsContext,
     @Inject(DOCUMENT) private readonly document: Document,
     private readonly destroyRef: DestroyRef) {
 
@@ -105,7 +110,7 @@ export class InstrumentSelectComponent implements OnInit {
     this.filter$.next(filter);
   }
 
-  onSelect(event: NzOptionSelectionChange, val: Instrument) {
+  onSelect(event: NzOptionSelectionChange, val: Instrument): void {
     if (event.isUserInput) {
       this.watch(val);
       setTimeout(() => {
@@ -153,7 +158,7 @@ export class InstrumentSelectComponent implements OnInit {
     });
   }
 
-  watch(instrument: InstrumentKey) {
+  watch(instrument: InstrumentKey): void {
     combineLatest({
       watchlist: this.currentWatchlist$,
       settings: this.settings$
@@ -161,16 +166,15 @@ export class InstrumentSelectComponent implements OnInit {
       take(1)
     ).subscribe(x => {
       this.watchlistCollectionService.addItemsToList(x.watchlist.id, [instrument]);
-      this.dashboardContextService.selectDashboardInstrument(instrument, x.settings.badgeColor!);
+      this.actionsContext.instrumentSelected(instrument, x.settings.badgeColor ?? defaultBadgeColor);
     });
   }
 
-
-  selectCollection(listId: string) {
+  selectCollection(listId: string): void {
     this.settingsService.updateSettings(this.guid, { activeListId: listId });
   }
 
-  private setDefaultWatchList() {
+  private setDefaultWatchList(): void {
     combineLatest([
         this.settings$,
         this.collection$
@@ -178,7 +182,7 @@ export class InstrumentSelectComponent implements OnInit {
     ).pipe(
       take(1)
     ).subscribe(([settings, collection]) => {
-      if (!!settings.activeListId) {
+      if (settings.activeListId != null) {
         if (collection.collection.find(w => w.id === settings.activeListId)) {
           return;
         }

@@ -1,12 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { MobileDashboardWidgetComponent } from './mobile-dashboard-widget.component';
-import { OnboardingService } from "../../services/onboarding.service";
 import {
   commonTestProviders,
   mockComponent,
   sharedModuleImportForTests
 } from "../../../../shared/utils/testing";
+import { ACTIONS_CONTEXT } from "../../../../shared/services/actions-context";
 
 describe('MobileDashboardWidgetComponent', () => {
   let component: MobileDashboardWidgetComponent;
@@ -28,7 +28,12 @@ describe('MobileDashboardWidgetComponent', () => {
         mockComponent({ selector: 'ats-edit-order-dialog-widget' }),
       ],
       providers: [
-        { provide: OnboardingService, useValue: { start: jasmine.createSpy('start').and.callThrough() } },
+        {
+          provide: ACTIONS_CONTEXT,
+          useValue: {
+            instrumentSelected: jasmine.createSpy('instrumentSelected').and.callThrough()
+          }
+        },
         ...commonTestProviders
       ]
     })

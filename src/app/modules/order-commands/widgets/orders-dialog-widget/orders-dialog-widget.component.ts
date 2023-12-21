@@ -9,7 +9,7 @@ import {NzTabComponent, NzTabSetComponent} from "ng-zorro-antd/tabs";
 import {CommonParameters, CommonParametersService} from "../../services/common-parameters.service";
 import {OrdersDialogService} from "../../../../shared/services/orders/orders-dialog.service";
 import {OrderDialogParams, OrderType} from "../../../../shared/models/orders/orders-dialog.model";
-import { environment } from "../../../../../environments/environment";
+import { EnvironmentService } from "../../../../shared/services/environment.service";
 
 @Component({
   selector: 'ats-orders-dialog-widget',
@@ -18,7 +18,7 @@ import { environment } from "../../../../../environments/environment";
   providers: [CommonParametersService]
 })
 export class OrdersDialogWidgetComponent implements OnInit, OnDestroy {
-  helpUrl = environment.externalLinks.help + '/new-order';
+  helpUrl = this.environmentService.externalLinks.help + '/new-order';
   dialogParams$!: Observable<OrderDialogParams | null>;
 
   currentPortfolio$!: Observable<PortfolioKey>;
@@ -37,6 +37,7 @@ export class OrdersDialogWidgetComponent implements OnInit, OnDestroy {
   stopOrderTab?: NzTabComponent;
 
   constructor(
+    private readonly environmentService: EnvironmentService,
     private readonly ordersDialogService: OrdersDialogService,
     private readonly currentDashboardService: DashboardContextService,
     private readonly instrumentService: InstrumentsService,
@@ -63,20 +64,20 @@ export class OrdersDialogWidgetComponent implements OnInit, OnDestroy {
     );
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.tabSetHeight$.complete();
   }
 
-  closeDialog() {
+  closeDialog(): void {
     this.ordersDialogService.closeNewOrderDialog();
   }
 
-  setInitialTab() {
+  setInitialTab(): void {
     this.dialogParams$.pipe(
       filter((p): p is OrderDialogParams => !!p),
       take(1)
     ).subscribe(params => {
-      if (!params.initialValues?.orderType) {
+      if (!params.initialValues.orderType) {
         return;
       }
 
@@ -96,25 +97,26 @@ export class OrdersDialogWidgetComponent implements OnInit, OnDestroy {
     });
   }
 
-  setCommonParameters(params: Partial<CommonParameters>) {
+  setCommonParameters(params: Partial<CommonParameters>): void {
     this.commonParametersService.setParameters(params);
   }
 
-  calculateTabSetHeight(event: ResizeObserverEntry[]) {
-    const modalContentEl = event[0]?.target;
-    const containerHeight = window.innerHeight * 0.7 -
-      parseFloat(window.getComputedStyle(modalContentEl.parentElement!).paddingTop) -
-      parseFloat(window.getComputedStyle(modalContentEl.parentElement!).paddingBottom);
+  calculateTabSetHeight(event: ResizeObserverEntry[]): void {
+    const modalContentEl = event[0]?.target as Element | undefined;
 
     if (!modalContentEl) {
       return;
     }
 
+    const containerHeight = window.innerHeight * 0.7 -
+      parseFloat(window.getComputedStyle(modalContentEl.parentElement!).paddingTop) -
+      parseFloat(window.getComputedStyle(modalContentEl.parentElement!).paddingBottom);
+
     const instrumentInfoEl = modalContentEl.querySelector('.instrument-info');
     this.tabSetHeight$.next(containerHeight - instrumentInfoEl!.clientHeight);
   }
 
-  private activateCommandTab(targetTab?: NzTabComponent) {
+  private activateCommandTab(targetTab?: NzTabComponent): void {
     if (!targetTab || targetTab.position == null) {
       return;
     }

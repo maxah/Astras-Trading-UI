@@ -31,11 +31,17 @@ export class InstrumentBadgeDisplayComponent implements OnInit {
     ])
       .pipe(
         map(([badges, settings]) => {
-          if (settings.badgesBind) {
+          if (settings.badgesBind ?? false) {
             return badges;
           }
 
-          return {[defaultBadgeColor]: badges[defaultBadgeColor]};
+          const defaultInstrumentKey = badges[defaultBadgeColor];
+
+          if(defaultInstrumentKey != null) {
+            return {[defaultBadgeColor]: defaultInstrumentKey};
+          }
+
+          return {} as InstrumentGroups;
         }),
         shareReplay(1)
       );
@@ -44,7 +50,7 @@ export class InstrumentBadgeDisplayComponent implements OnInit {
   getApplicableBadges(selectedGroups: InstrumentGroups): string[] {
     return Object.entries(selectedGroups)
       .filter(([key]) => instrumentsBadges.includes(key))
-      .filter(([, value]) => this.isBadgeApplicable(value))
+      .filter(([, value]) => this.isBadgeApplicable(value!))
       .map(([key]) => key);
   }
 

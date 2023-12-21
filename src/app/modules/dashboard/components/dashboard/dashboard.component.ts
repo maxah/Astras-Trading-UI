@@ -35,7 +35,6 @@ import { WidgetMeta } from "../../../../shared/models/widget-meta.model";
 import { WidgetInstance } from "../../../../shared/models/dashboard/dashboard-item.model";
 import { TerminalSettingsService } from "../../../../shared/services/terminal-settings.service";
 import { GridType as TerminalGridType } from "../../../../shared/models/terminal-settings/terminal-settings.model";
-
 interface Safe extends GridsterConfig {
   draggable: Draggable;
   resizable: Resizable;
@@ -47,7 +46,7 @@ type WidgetItem = { instance: WidgetInstance, gridsterItem: GridsterItem };
 @Component({
   selector: 'ats-dashboard',
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.less'],
+  styleUrls: ['./dashboard.component.less']
 })
 export class DashboardComponent implements OnInit {
   @ViewChild(GridsterComponent)
@@ -113,11 +112,11 @@ export class DashboardComponent implements OnInit {
           ignoreMarginInRow: false,
           draggable: {
             enabled: true,
-            start: (gridsterItem: any, gridsterItemComp: any) => {
+            start: (gridsterItem: any, gridsterItemComp: any): void => {
               gridsterItemComp.el.style.zIndex = '3';
               this.isBlockWidget = true;
             },
-            stop: (gridsterItem: any, gridsterItemComp: any) => {
+            stop: (gridsterItem: any, gridsterItemComp: any): void => {
               gridsterItemComp.el.style.zIndex = '2';
               this.isBlockWidget = false;
             }
@@ -128,10 +127,10 @@ export class DashboardComponent implements OnInit {
               s: true, n: true, w: true, e: true, nw: true, ne: true, sw: true, se: false
               // se: false
             },
-            start: () => {
+            start: (): void => {
               this.isBlockWidget = true;
             },
-            stop: () => {
+            stop: (): void => {
               this.isBlockWidget = false;
             }
           },
@@ -145,14 +144,14 @@ export class DashboardComponent implements OnInit {
           disableWindowResize: false,
           disableWarnings: true,
           scrollToNewItems: false,
-          itemChangeCallback: (gridItem: any) => {
+          itemChangeCallback: (gridItem: any): void => {
             this.updateWidgetPosition(
               gridItem.guid,
               {
-                x: gridItem.x,
-                y: gridItem.y,
-                cols: gridItem.cols,
-                rows: gridItem.rows
+                x: gridItem.x as number,
+                y: gridItem.y as number,
+                cols: gridItem.cols as number,
+                rows: gridItem.rows as number
               }
             );
           }
@@ -182,12 +181,12 @@ export class DashboardComponent implements OnInit {
             guid: i.guid
           }
         }))
-          .filter(x => !!x.instance.widgetMeta)
+          .filter(x => !!(x.instance.widgetMeta as WidgetMeta | undefined))
       )
     );
   }
 
-  updateWidgetPosition(widgetGuid: string, position: DashboardItemPosition) {
+  updateWidgetPosition(widgetGuid: string, position: DashboardItemPosition): void {
     this.manageDashboardsService.updateWidgetPositions([{widgetGuid, position}]);
   }
 
@@ -195,7 +194,7 @@ export class DashboardComponent implements OnInit {
     return item.instance.instance.guid;
   }
 
-  private checkNotPositionedItems(items: Widget[], meta: WidgetMeta[]) {
+  private checkNotPositionedItems(items: Widget[], meta: WidgetMeta[]): void {
     this.options$.pipe(
       take(1)
     ).subscribe(options => {
@@ -212,11 +211,11 @@ export class DashboardComponent implements OnInit {
 
         const widgetMeta = meta.find(m => m.typeId === notPositionedItem.widgetType);
         if (widgetMeta) {
-          if (widgetMeta.desktopMeta?.addOptions?.initialHeight != null) {
+          if (widgetMeta.desktopMeta?.addOptions.initialHeight != null) {
             newPosition.rows = widgetMeta.desktopMeta.addOptions.initialHeight;
           }
 
-          if (widgetMeta.desktopMeta?.addOptions?.initialHeightPx != null && this.gridster?.curRowHeight != null) {
+          if (widgetMeta.desktopMeta?.addOptions.initialHeightPx != null && this.gridster?.curRowHeight != null) {
             const expectedHeight = widgetMeta.desktopMeta.addOptions.initialHeightPx;
             let rowsHeight: number;
             if( this.gridster.curRowHeight > expectedHeight) {
@@ -230,12 +229,12 @@ export class DashboardComponent implements OnInit {
 
           const positionedItems = items.filter(x => !!x.position);
 
-          if (widgetMeta.desktopMeta?.addOptions?.isFullWidth) {
+          if (widgetMeta.desktopMeta?.addOptions.isFullWidth ?? false) {
             newPosition.cols = this.gridster?.columns ?? options.minCols ?? this.dashboardSize.width;
           }
 
           const topOffset = newPosition.y + newPosition.rows;
-          if (widgetMeta.desktopMeta?.addOptions?.initialPosition === "top") {
+          if (widgetMeta.desktopMeta?.addOptions.initialPosition === "top") {
             if (positionedItems.some(w => newPosition.y >= w.position!.y && newPosition.y <= (w.position!.y + w.position!.rows))) {
               positionedItems
                 .filter(w => w.position!.y >= newPosition.y)
@@ -249,7 +248,7 @@ export class DashboardComponent implements OnInit {
                   });
                 });
             }
-          } else if(widgetMeta.desktopMeta?.addOptions?.initialPosition === "below" && this.gridster!.grid.length > 0) {
+          } else if(widgetMeta.desktopMeta?.addOptions.initialPosition === "below" && this.gridster!.grid.length > 0) {
             newPosition.y = Math.max(...this.gridster!.grid.map(x=> x.item.y + x.item.rows));
           }
         }

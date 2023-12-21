@@ -58,7 +58,7 @@ export class WatchlistCollectionBrokerService {
 
       combineLatest([
         this.applicationMetaService.getMeta(),
-        this.remoteStorageService.getGroup<Watchlist>(this.groupKey)
+        this.remoteStorageService.getGroup(this.groupKey)
       ]).pipe(
         take(1)
       ).subscribe(([meta, records]) => {
@@ -111,7 +111,7 @@ export class WatchlistCollectionBrokerService {
     }
 
     return this.collection$.pipe(
-      filter((x): x is Watchlist[] => !!x)
+      filter((x): x is Watchlist[] => !!(x as Watchlist[] | undefined))
     );
   }
 
@@ -177,7 +177,7 @@ export class WatchlistCollectionBrokerService {
       ...list,
       items: list.items.map(i => ({
         ...i,
-        recordId: i.recordId ?? GuidGenerator.newGuid()
+        recordId: (i.recordId as string | undefined) ?? GuidGenerator.newGuid()
       }))
     };
   }

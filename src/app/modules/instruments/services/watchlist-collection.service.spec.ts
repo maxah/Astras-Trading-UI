@@ -16,6 +16,7 @@ import {
   Subject,
   take
 } from "rxjs";
+import { EnvironmentService } from "../../../shared/services/environment.service";
 
 describe('WatchListCollectionService', () => {
   const errorHandlerSpy = jasmine.createSpyObj('ErrorHandlerService', ['handleError']);
@@ -46,7 +47,7 @@ describe('WatchListCollectionService', () => {
     ]
   } as WatchlistCollection;
 
-  const setupGetItemMock = (returnValue: WatchlistCollection | null = null) => {
+  const setupGetItemMock = (returnValue: WatchlistCollection | null = null): void => {
     watchlistCollectionBrokerServiceSpy.getCollection.and.returnValue(new BehaviorSubject(JSON.parse(JSON.stringify(returnValue?.collection))));
   };
 
@@ -62,7 +63,13 @@ describe('WatchListCollectionService', () => {
       providers: [
         WatchlistCollectionService,
         { provide: WatchlistCollectionBrokerService, useValue: watchlistCollectionBrokerServiceSpy },
-        { provide: ErrorHandlerService, useValue: errorHandlerSpy }
+        { provide: ErrorHandlerService, useValue: errorHandlerSpy },
+        {
+          provide: EnvironmentService,
+          useValue: {
+            apiUrl: ''
+          }
+        }
       ]
     });
 
@@ -136,7 +143,7 @@ describe('WatchListCollectionService', () => {
     setupGetItemMock(testCollection);
     watchlistCollectionBrokerServiceSpy.addOrUpdateLists.and.returnValue(new Subject());
 
-    service.removeItemsFromList(testCollection.collection[0].id, testCollection.collection[0].items.map(x => x.recordId));
+    service.removeItemsFromList(testCollection.collection[0].id, testCollection.collection[0].items.map(x => x.recordId!));
 
     expect(watchlistCollectionBrokerServiceSpy.addOrUpdateLists).toHaveBeenCalled();
   });

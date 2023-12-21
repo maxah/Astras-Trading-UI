@@ -1,6 +1,5 @@
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { BehaviorSubject, combineLatest, filter, Observable, Subject, switchMap, tap } from 'rxjs';
-import { formatCurrency } from 'src/app/shared/utils/formatters';
 import { Finance } from '../../../models/finance.model';
 import { InfoService } from '../../../services/info.service';
 import { distinct, map } from 'rxjs/operators';
@@ -16,10 +15,10 @@ export class FinanceComponent implements OnInit, OnDestroy {
   columns = 1;
   finance$?: Observable<Finance | null>;
   isLoading$ = new BehaviorSubject<boolean>(true);
-  private isActivated$ = new Subject<boolean>();
+  private readonly isActivated$ = new Subject<boolean>();
   private currency = "RUB";
 
-  constructor(private service: InfoService) {
+  constructor(private readonly service: InfoService) {
   }
 
   @Input()
@@ -39,12 +38,8 @@ export class FinanceComponent implements OnInit, OnDestroy {
       tap(() => this.isLoading$.next(true)),
       switchMap(exchangeInfo => this.service.getFinance(exchangeInfo)),
       tap(() => this.isLoading$.next(false)),
-      tap(f => this.currency = f?.currency || 'RUB')
+      tap(f => this.currency = f?.currency ?? 'RUB')
     );
-  }
-
-  format(number: number) {
-    return formatCurrency(number, this.currency, 0);
   }
 
   ngOnDestroy(): void {

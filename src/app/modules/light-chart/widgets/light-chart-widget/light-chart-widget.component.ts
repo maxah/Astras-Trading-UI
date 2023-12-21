@@ -23,7 +23,7 @@ import { getValueOrDefault } from "../../../../shared/utils/object-helper";
   styleUrls: ['./light-chart-widget.component.less']
 })
 export class LightChartWidgetComponent implements OnInit {
-  shouldShowSettings: boolean = false;
+  shouldShowSettings = false;
 
   @Input({required: true})
   widgetInstance!: WidgetInstance;
@@ -44,7 +44,7 @@ export class LightChartWidgetComponent implements OnInit {
     return this.widgetInstance.instance.guid;
   }
 
-  onSettingsChange() {
+  onSettingsChange(): void {
     this.shouldShowSettings = !this.shouldShowSettings;
   }
 
@@ -56,6 +56,7 @@ export class LightChartWidgetComponent implements OnInit {
         ...settings,
         timeFrame: getValueOrDefault(settings.timeFrame, TimeframeValue.Day),
         timeFrameDisplayMode: getValueOrDefault(settings.timeFrameDisplayMode, TimeFrameDisplayMode.Buttons),
+        availableTimeFrames: [TimeframeValue.M1, TimeframeValue.M15, TimeframeValue.H, TimeframeValue.Day],
         width: 300,
         height: 300
       }),
